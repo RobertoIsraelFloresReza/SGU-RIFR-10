@@ -5,55 +5,54 @@ pipeline {
         PATH = "/usr/local/bin:${env.PATH}"
     }
 
-
     stages {
+        // etapa para parar los servicios
         stage('Parando los servicios') {
             steps {
-                bat '''
-                    docker-compose -p sgu-rifr-10 down || true
-                '''
+               sh  '''
+                docker-compose -p sgu-rifr-10 down || true
+               '''
+            }
+        }
+        // etapa para eliminar imagenes antiguas
+        stage('Eliminando imagenes antiguas') {
+            steps {
+               sh  '''
+                IMAGES=$(docker images --filter "label=com.docker.compose.project=sgu-rifr-10" -q)
+                if [ -n "$IMAGES" ]; then
+                    docker rmi -f $IMAGES || true
+                else 
+                    echo "No hay imagenes para eliminar"
+                fi
+               '''
             }
         }
 
-        stage('Borrando imágenes antiguas') {
+        // etapa para descargar actualizaciones del repositorio
+        stage('Descargando actualizaciones del repositorio') {
             steps {
-                bat '''
-                    for /f "tokens=*" %%i in ('docker images --filter "label=com.docker.compose.project=sgu-rifr-10" -q') do (
-                        docker rmi -f %%i
-                    )
-                    if errorlevel 1 (
-                        echo No hay imágenes por eliminar
-                    ) else (
-                        echo Imágenes eliminadas correctamente
-                    )
-                '''
+               checkout scm // que es scm? --> Source Code Management
             }
         }
-
-        stage('Actualizando...') {
+        // etapa para construir y desplegar
+        stage('Construyendo y desplegando') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Construyendo y desplegando...') {
-            steps {
-                bat '''
-                    docker compose up --build -d
-                '''
+               sh  '''
+                docker-compose up --build -d
+               '''
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline ejecutado correctamente.'
+            echo 'Pipeline ejecutada con exito'
         }
         failure {
-            echo 'Error al ejecutar el pipeline.'
+            echo 'Pipeline fallida'
         }
         always {
-            echo 'Pipeline finalizado.'
+            echo 'Pipeline finalizada'
         }
     }
 }
