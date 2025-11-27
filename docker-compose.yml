@@ -1,0 +1,81 @@
+# Aqui se configuran los contenedores
+services:
+  database:
+    image: mysql:8
+    container_name: sgu-database
+    environment:
+      MYSQL_ROOT_PASSWORD: isra1234$
+      MYSQL_DATABASE: sgu-rifr-10c
+    # Explicame cual es la diferencia entre los puertos de izquierda:derecha 
+    # El puerto de la izquierda (3307) es el puerto en la máquina host (tu computadora local)
+    # El puerto de la derecha (3306) es el puerto dentro del contenedor Docker
+    ports:
+      - "3307:3306"
+    networks:
+      - sgu-net
+    volumes:
+      - sgu-volume:/var/lib/mysql
+
+  frontend:
+    image: client:v1.0-sgu
+    build:
+      context: ./client
+      args:
+        API_HOST: localhost
+        API_PORT: 8080
+        API_BASE: /api/usuarios
+        API_PROTOCOL: https
+    container_name: sgu-frontend
+    ports:
+    # PORT FORWARDING = MAPEO DE PUERTOS
+    # PC: 3000 /TTTTTTTTTTTT\ CONTENEDOR:80
+      - "3000:443"
+    networks:
+      - sgu-net
+    volumes:
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      - database
+
+  backend:
+    image: server:v1.0-sgu
+    container_name: sgu-backend
+    build:
+      context: ./server
+    environment:
+    # jdbc:mysql://database:3306
+      SERVER_PORT: 8080
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: sgu-rifr-10c
+      DB_USER: root
+      DB_PASS: isra1234$
+      SERVER_SSL_ENABLED: true
+      SERVER_SSL_KEYSTORE: /etc/letsencrypt/live/localhost/keystore.p12
+      SERVER_SSL_KEYSTORE_PASSWORD: changeit
+    # Explicame cual es la diferencia entre los puertos de izquierda:derecha
+    # El puerto de la izquierda (8080) es el puerto en la máquina host (tu computadora local)
+    # El puerto de la derecha (8080) es el puerto dentro del contenedor Docker
+    ports:
+      - "8080:8080"
+    networks:
+      - sgu-net
+    volumes:
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+
+# Aqui se configuran las redes donde se comunican los contenedores
+# docker network create --driver bridge sgu-net
+networks:
+  sgu-net:
+    external: true
+
+# Aqui se configuran los volúmenes que ocupan los contenedores
+# docker volume create sgu-volume
+volumes:
+  sgu-volume:
+    external: true
+  certbot-conf:
+    external: true
+      
