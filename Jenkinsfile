@@ -5,7 +5,7 @@ pipeline {
         stage('Parando los servicios') {
             steps {
                 bat '''
-                    docker-compose -p sgu-rifr-10c down || true
+                    docker-compose -p sgu-rifr-10 down || true
                 '''
             }
         }
@@ -13,7 +13,7 @@ pipeline {
         stage('Borrando imágenes antiguas') {
             steps {
                 bat '''
-                    for /f "tokens=*" %%i in ('docker images --filter "label=com.docker.compose.project=demo" -q') do (
+                    for /f "tokens=*" %%i in ('docker images --filter "label=com.docker.compose.project=sgu-rifr-10" -q') do (
                         docker rmi -f %%i
                     )
                     if errorlevel 1 (
